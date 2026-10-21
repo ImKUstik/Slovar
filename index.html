@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Кликер · Свиток</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --parch-1:#f6ecd6;
+    --parch-2:#efe1c2;
+    --parch-3:#e6d3ad;
+    --ink:#2b1d0e;
+    --ink-soft:#4a3520;
+    --ink-faint:#7a6244;
+    --wax:#8b2e2e;
+    --wax-dark:#5e1a1a;
+    --gold:#b8860b;
+    --gold-soft:#d4a94a;
+    --line:#c9b48e;
+    --green:#2e7d32;
+    --shadow:0 10px 30px -10px rgba(60,40,15,.5);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{min-height:100%}
+  body{
+    font-family:'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at 15% 10%, rgba(255,250,240,.5), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(180,150,110,.35), transparent 45%),
+      repeating-linear-gradient(45deg, rgba(120,90,50,.05) 0px, rgba(120,90,50,.05) 1px, transparent 1px, transparent 5px),
+      linear-gradient(160deg,#d9c49a 0%, #c9b084 40%, #b89a68 100%);
+    min-height:100vh;
+    padding:2rem 1rem;
+    display:flex;justify-content:center;
+    overflow-x:hidden;
+    position:relative;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='0.06'/></svg>");
+    opacity:.7;
+  }
+
+  /* ================= ОБЁРТКА СВИТКА ================= */
+  .scroll-wrap{
+    position:relative;
+    width:min(1000px,100%);
+    z-index:2;
+  }
+
+  /* Валики */
+  .scroll-rod{
+    height:38px;border-radius:40px/14px;
+    background:
+      linear-gradient(180deg,#8a6a44 0%, #6b4f2e 35%, #4e3720 50%, #6b4f2e 65%, #8a6a44 100%);
+    box-shadow:
+      inset 0 2px 4px rgba(255,230,180,.35),
+      inset 0 -3px 6px rgba(0,0,0,.5),
+      0 6px 14px -6px rgba(0,0,0,.6);
+    position:relative;
+    z-index:3;
+  }
+  .scroll-rod::before, .scroll-rod::after{
+    content:"";position:absolute;top:50%;transform:translateY(-50%);
+    width:22px;height:56px;border-radius:12px;
+    background:linear-gradient(180deg,#a8845a,#6b4f2e 60%,#3e2b17);
+    box-shadow:inset 0 1px 2px rgba(255,230,180,.4), 0 4px 8px rgba(0,0,0,.4);
+  }
+  .scroll-rod::before{left:-10px}
+  .scroll-rod::after{right:-10px}
+
+  /* ================= ПЕРГАМЕНТ ================= */
+  .parchment{
+    position:relative;
+    background:
+      radial-gradient(ellipse at 20% 15%, rgba(255,250,238,.9), transparent 55%),
+      radial-gradient(ellipse at 80% 85%, rgba(200,170,120,.35), transparent 60%),
+      repeating-linear-gradient(90deg, rgba(140,110,70,.04) 0px, rgba(140,110,70,.04) 1px, transparent 1px, transparent 4px),
+      linear-gradient(175deg,#f6ecd6 0%, #efe1c2 45%, #e6d3ad 100%);
+    padding:2.6rem clamp(1.2rem, 4vw, 3rem) 2.4rem;
+    box-shadow:
+      inset 0 0 80px rgba(150,110,60,.28),
+      inset 0 0 12px rgba(120,80,40,.18),
+      0 30px 60px -30px rgba(40,25,10,.7);
+    border-left:6px solid rgba(120,85,45,.15);
+    border-right:6px solid rgba(120,85,45,.15);
+    position:relative;
+    overflow:hidden;
+    /* анимация разворачивания */
+    max-height:0;
+    opacity:0;
+    transform:scaleY(.85);
+    transform-origin:top center;
+    transition:max-height 1.4s cubic-bezier(.2,.8,.2,1),
+               opacity .8s ease .2s,
+               transform 1.2s cubic-bezier(.2,.8,.2,1),
+               padding .4s ease;
+    padding-top:0;
+    padding-bottom:0;
+  }
+  .scroll-wrap.opened .parchment{
+    max-height:5000px;
+    opacity:1;
+    transform:scaleY(1);
+    padding-top:2.6rem;
+    padding-bottom:2.4rem;
+  }
+  .parchment::before, .parchment::after{
+    content:"";position:absolute;left:0;right:0;height:14px;
+    background:radial-gradient(circle at 10px 0, transparent 9px, rgba(120,85,45,.18) 10px) repeat-x;
+    background-size:20px 14px;
+    pointer-events:none;
+    z-index:1;
+  }
+  .parchment::before{top:-1px;transform:scaleY(-1)}
+  .parchment::after{bottom:-1px}
+
+  /* Валики в свёрнутом состоянии ближе */
+  .scroll-rod.top{
+    margin-bottom:0;
+    transition:margin 1.4s cubic-bezier(.2,.8,.2,1);
+  }
+  .scroll-wrap.opened .scroll-rod.top{margin-bottom:0}
+  .scroll-rod.bottom{
+    transition:margin 1.4s cubic-bezier(.2,.8,.2,1);
+  }
+
+  /* ================= ШАПКА ================= */
+  .brand{text-align:center;margin-bottom:1.4rem}
+  .brand h1{
+    font-size:clamp(1.8rem, 4.5vw, 2.8rem);
+    font-weight:800;
+    letter-spacing:-.5px;
+    color:var(--ink);
+    line-height:1.15;
+    background:linear-gradient(120deg, #2b1d0e, #5e3a1a 60%, #2b1d0e);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .brand .sub{
+    font-size:.8rem;
+    font-weight:600;
+    letter-spacing:4px;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    margin-top:.4rem;
+  }
+  .ornament{
+    display:flex;align-items:center;justify-content:center;gap:1rem;
+    margin:.9rem 0 1.4rem;
+    color:var(--gold);
+    font-size:1.3rem;
+  }
+  .ornament::before, .ornament::after{
+    content:"";height:1px;flex:1;max-width:180px;
+    background:linear-gradient(90deg,transparent,var(--line),transparent);
+  }
+
+  /* ================= АВТОРИЗАЦИЯ ================= */
+  .auth{display:flex;justify-content:center;margin-bottom:1rem}
+  .auth-card{
+    width:min(460px,100%);
+    background:rgba(255,250,238,.6);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1.5rem 1.6rem 1.4rem;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.7), var(--shadow);
+    backdrop-filter:blur(4px);
+  }
+  .auth-tabs{
+    display:flex;gap:.4rem;margin-bottom:1.2rem;
+    border-bottom:1px solid var(--line);padding-bottom:.4rem;
+  }
+  .auth-tab{
+    flex:1;
+    font-family:inherit;
+    font-size:.9rem;font-weight:600;
+    background:none;border:none;cursor:pointer;
+    color:var(--ink-faint);
+    padding:.6rem 0;position:relative;
+    transition:color .2s;
+    border-radius:8px;
+  }
+  .auth-tab:hover{color:var(--ink)}
+  .auth-tab.active{color:var(--ink)}
+  .auth-tab.active::after{
+    content:"";position:absolute;left:20%;right:20%;bottom:-.5rem;height:2px;
+    background:linear-gradient(90deg,transparent,var(--wax),transparent);
+    border-radius:2px;
+  }
+  .auth-form{display:flex;flex-direction:column;gap:.85rem}
+  .auth-form.hidden{display:none}
+
+  .field{display:flex;flex-direction:column;gap:.3rem}
+  .field label{
+    font-size:.75rem;font-weight:600;
+    letter-spacing:1.5px;text-transform:uppercase;
+    color:var(--ink-faint);
+  }
+  .field input{
+    font-family:inherit;
+    font-size:1rem;
+    font-weight:500;
+    padding:.7rem .9rem;
+    background:rgba(255,252,245,.9);
+    border:1px solid var(--line);
+    border-radius:10px;
+    color:var(--ink);
+    outline:none;
+    transition:border-color .2s, box-shadow .2s, transform .1s;
+  }
+  .field input:focus{
+    border-color:var(--gold);
+    box-shadow:0 0 0 3px rgba(184,134,11,.18);
+    transform:translateY(-1px);
+  }
+  .field input::placeholder{color:#b8a07a}
+
+  .btn{
+    font-family:inherit;
+    font-size:.92rem;font-weight:600;
+    letter-spacing:.5px;
+    padding:.8rem 1.4rem;
+    border-radius:10px;
+    border:1px solid var(--ink);
+    background:linear-gradient(180deg,#3a2a18,#2b1d0e);
+    color:#f4e9d3;
+    cursor:pointer;
+    transition:transform .15s, box-shadow .2s, background .2s;
+    box-shadow:inset 0 1px 0 rgba(255,230,180,.25), 0 6px 14px -8px rgba(0,0,0,.7);
+  }
+  .btn:hover{transform:translateY(-2px);box-shadow:inset 0 1px 0 rgba(255,230,180,.35), 0 10px 20px -8px rgba(0,0,0,.8)}
+  .btn:active{transform:translateY(0) scale(.98)}
+  .btn-wax{
+    background:linear-gradient(180deg,#a33d3d,#6e1f1f);
+    border-color:var(--wax-dark);
+    box-shadow:inset 0 1px 0 rgba(255,220,180,.4), 0 6px 16px -6px rgba(120,20,20,.7);
+  }
+  .btn-wax:hover{box-shadow:inset 0 1px 0 rgba(255,220,180,.5), 0 10px 22px -6px rgba(120,20,20,.8)}
+  .btn-ghost{
+    background:transparent;color:var(--ink);
+    border:1px solid var(--line);
+    box-shadow:none;
+  }
+  .btn-ghost:hover{background:rgba(120,85,45,.1);box-shadow:none}
+  .btn-sm{padding:.5rem 1rem;font-size:.82rem}
+
+  .error{
+    color:var(--wax-dark);
+    font-size:.85rem;
+    font-weight:500;
+    min-height:1.2em;
+    text-align:center;
+  }
+
+  /* ================= ИГРА ================= */
+  .game{display:none}
+  .game.active{display:block;animation:fadeIn .5s ease}
+
+  @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+  .user-bar{
+    display:flex;justify-content:space-between;align-items:center;
+    gap:1rem;flex-wrap:wrap;
+    padding:.7rem 1rem;
+    background:rgba(255,250,238,.55);
+    border:1px solid var(--line);
+    border-radius:12px;
+    margin-bottom:1.4rem;
+  }
+  .user-bar .who{
+    font-size:.9rem;font-weight:600;
+    color:var(--ink);
+    display:flex;align-items:center;gap:.5rem;
+  }
+  .user-bar .who b{color:var(--wax-dark);font-weight:700}
+  .user-bar .avatar{
+    width:32px;height:32px;border-radius:50%;
+    background:linear-gradient(135deg,#a33d3d,#6e1f1f);
+    color:#f4e9d3;display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:.9rem;
+  }
+
+  .score-panel{text-align:center;margin:1.2rem 0 1.6rem}
+  .score-panel .label{
+    font-size:.78rem;font-weight:600;
+    letter-spacing:3px;text-transform:uppercase;
+    color:var(--ink-faint);
+    margin-bottom:.3rem;
+  }
+  .score-panel .score{
+    font-size:clamp(2.4rem, 8vw, 4rem);
+    font-weight:900;
+    color:var(--ink);
+    line-height:1.05;
+    letter-spacing:-1px;
+    font-variant-numeric:tabular-nums;
+    transition:transform .12s ease;
+    display:inline-block;
+  }
+  .score-panel .score.bump{transform:scale(1.08)}
+  .score-panel .per-click{
+    color:var(--ink-soft);
+    font-size:.92rem;font-weight:500;
+    margin-top:.2rem;
+  }
+  .score-panel .per-click b{color:var(--green)}
+
+  /* кнопка-печать */
+  .seal-area{
+    display:flex;flex-direction:column;align-items:center;
+    margin:1rem 0 2rem;
+    position:relative;
+  }
+  .seal-btn{
+    width:180px;height:180px;
+    border-radius:50%;
+    border:none;cursor:pointer;
+    background:
+      radial-gradient(circle at 35% 30%, #c45454 0%, #a33d3d 35%, #7e2424 70%, #5e1a1a 100%);
+    box-shadow:
+      0 18px 40px -14px rgba(80,20,20,.8),
+      inset 0 4px 10px rgba(255,200,180,.35),
+      inset 0 -8px 14px rgba(60,10,10,.6);
+    color:#f6e2c8;
+    font-family:inherit;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.2rem;
+    transition:transform .1s ease, box-shadow .15s;
+    position:relative;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .seal-btn::before{
+    content:"";position:absolute;inset:12px;border-radius:50%;
+    border:2px dashed rgba(255,220,190,.35);
+    pointer-events:none;
+  }
+  .seal-btn .seal-glyph{font-size:2.4rem;line-height:1;margin-bottom:.1rem}
+  .seal-btn .seal-text{
+    font-size:.72rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:.95;
+  }
+  .seal-btn:hover{box-shadow:0 22px 46px -14px rgba(80,20,20,.9), inset 0 4px 10px rgba(255,200,180,.45), inset 0 -8px 14px rgba(60,10,10,.6)}
+  .seal-btn:active{transform:scale(.94)}
+
+  .float-plus{
+    position:absolute;pointer-events:none;
+    font-size:1.5rem;font-weight:900;
+    color:var(--wax-dark);
+    text-shadow:0 1px 2px rgba(255,240,220,.9);
+    animation:floatUp .95s cubic-bezier(.2,.7,.3,1) forwards;
+    z-index:5;
+  }
+  @keyframes floatUp{
+    0%{opacity:0;transform:translateY(0) scale(.6)}
+    15%{opacity:1;transform:translateY(-8px) scale(1.15)}
+    100%{opacity:0;transform:translateY(-100px) scale(1.1)}
+  }
+
+  /* монетки-частицы */
+  .coin{
+    position:absolute;pointer-events:none;
+    width:14px;height:14px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #ffe9a0, #d4a94a 60%, #b8860b);
+    box-shadow:0 2px 6px rgba(120,80,20,.5), inset 0 1px 2px rgba(255,255,255,.7);
+    animation:coinFly .8s ease-out forwards;
+    z-index:4;
+  }
+  @keyframes coinFly{
+    0%{opacity:1;transform:translate(0,0) scale(1)}
+    100%{opacity:0;transform:translate(var(--dx), var(--dy)) scale(.4) rotate(360deg)}
+  }
+
+  /* улучшения */
+  .upgrades{margin-top:1.6rem;border-top:1px solid var(--line);padding-top:1.3rem}
+  .upgrades h3{
+    font-size:1rem;font-weight:700;
+    letter-spacing:2px;text-transform:uppercase;
+    text-align:center;color:var(--ink-soft);
+    margin-bottom:1rem;
+  }
+  .upgrade-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    gap:1rem;
+  }
+  .upgrade{
+    background:rgba(255,250,238,.6);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1.1rem;
+    display:flex;flex-direction:column;gap:.4rem;
+    transition:border-color .2s, box-shadow .2s, transform .2s;
+    position:relative;
+  }
+  .upgrade:hover{border-color:var(--gold);box-shadow:0 8px 22px -12px rgba(60,40,15,.7);transform:translateY(-2px)}
+  .upgrade .u-head{display:flex;justify-content:space-between;align-items:center}
+  .upgrade .u-name{font-size:1rem;font-weight:700;color:var(--ink)}
+  .upgrade .u-level{
+    font-size:.72rem;font-weight:700;letter-spacing:1px;
+    padding:.15rem .55rem;border-radius:100px;
+    background:rgba(120,85,45,.15);color:var(--ink-soft);
+  }
+  .upgrade .u-desc{font-size:.88rem;color:var(--ink-soft)}
+  .upgrade .u-row{display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-top:.5rem}
+  .upgrade .u-cost{
+    font-size:.85rem;font-weight:700;
+    color:var(--wax-dark);
+    display:flex;align-items:center;gap:.3rem;
+  }
+  .upgrade .u-cost::before{
+    content:"●";color:var(--gold);font-size:.8rem;
+  }
+  .upgrade button:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+
+  /* ================= ТАБЛИЦА ЛИДЕРОВ ================= */
+  .leaders{margin-top:2rem;border-top:1px solid var(--line);padding-top:1.4rem}
+  .leaders h3{
+    font-size:1.4rem;font-weight:800;
+    letter-spacing:-.3px;text-align:center;
+    color:var(--ink);
+    margin-bottom:.2rem;
+  }
+  .leaders .lead-note{
+    text-align:center;color:var(--ink-faint);
+    font-size:.85rem;margin-bottom:1.1rem;
+  }
+  .leader-table{
+    width:100%;border-collapse:collapse;
+    background:rgba(255,250,238,.6);
+    border:1px solid var(--line);
+    border-radius:14px;
+    overflow:hidden;
+    font-size:.92rem;
+  }
+  .leader-table th, .leader-table td{
+    padding:.75rem .9rem;
+    text-align:left;
+    border-bottom:1px solid rgba(184,160,122,.4);
+  }
+  .leader-table th{
+    background:rgba(120,85,45,.12);
+    font-size:.72rem;font-weight:700;letter-spacing:1.5px;
+    text-transform:uppercase;color:var(--ink-soft);
+  }
+  .leader-table tr:last-child td{border-bottom:none}
+  .leader-table td.rank{
+    width:52px;font-weight:800;color:var(--gold);font-size:1.1rem;
+  }
+  .leader-table td.score-cell{
+    text-align:right;font-weight:800;
+    color:var(--ink);font-variant-numeric:tabular-nums;
+    font-size:1rem;
+  }
+  .leader-table tr.me{
+    background:linear-gradient(90deg, rgba(184,134,11,.16), rgba(184,134,11,.04));
+  }
+  .leader-table tr.me td{color:var(--ink)}
+  .leader-table .empty{
+    text-align:center;color:var(--ink-faint);
+    font-style:italic;padding:1.4rem;
+  }
+  .you-badge{
+    display:inline-block;margin-left:.5rem;
+    font-size:.68rem;font-weight:700;letter-spacing:1px;
+    padding:.12rem .5rem;border-radius:100px;
+    background:var(--wax);color:#f6e2c8;
+    vertical-align:middle;
+  }
+
+  /* ================= ТОСТ ================= */
+  .toast{
+    position:fixed;bottom:1.4rem;left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:linear-gradient(180deg,#3a2a18,#2b1d0e);
+    color:#f4e9d3;
+    font-size:.88rem;font-weight:500;
+    letter-spacing:.3px;
+    padding:.75rem 1.4rem;border-radius:10px;
+    box-shadow:0 10px 30px -10px rgba(0,0,0,.8);
+    opacity:0;pointer-events:none;
+    transition:opacity .3s, transform .3s;
+    z-index:2000;
+    max-width:90vw;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media(max-width:600px){
+    body{padding:1rem .5rem}
+    .parchment{padding-left:1rem;padding-right:1rem}
+    .seal-btn{width:150px;height:150px}
+    .seal-btn .seal-glyph{font-size:2rem}
+    .scroll-rod{height:30px}
+    .leader-table th, .leader-table td{padding:.55rem .6rem;font-size:.85rem}
+    .user-bar{padding:.6rem .8rem}
+  }
+</style>
+</head>
+<body>
+<div class="scroll-wrap" id="scrollWrap">
+  <div class="scroll-rod top"></div>
+  <div class="parchment">
+
+    <div class="brand">
+      <h1>Кликер</h1>
+      <div class="sub">древний свиток</div>
+    </div>
+    <div class="ornament">❦</div>
+
+    <!-- АВТОРИЗАЦИЯ -->
+    <section class="auth" id="authSection">
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login" id="tabLogin">Вход</button>
+          <button class="auth-tab" data-tab="register" id="tabRegister">Регистрация</button>
+        </div>
+
+        <form class="auth-form" id="loginForm">
+          <div class="field">
+            <label for="loginName">Имя</label>
+            <input type="text" id="loginName" autocomplete="username" placeholder="твой ник">
+          </div>
+          <div class="field">
+            <label for="loginPass">Пароль</label>
+            <input type="password" id="loginPass" autocomplete="current-password" placeholder="••••••">
+          </div>
+          <div class="error" id="loginError"></div>
+          <button type="submit" class="btn btn-wax">Войти</button>
+        </form>
+
+        <form class="auth-form hidden" id="registerForm">
+          <div class="field">
+            <label for="regName">Имя</label>
+            <input type="text" id="regName" autocomplete="username" placeholder="придумай ник">
+          </div>
+          <div class="field">
+            <label for="regPass">Пароль</label>
+            <input type="password" id="regPass" autocomplete="new-password" placeholder="минимум 3 символа">
+          </div>
+          <div class="field">
+            <label for="regPass2">Повтори пароль</label>
+            <input type="password" id="regPass2" autocomplete="new-password" placeholder="ещё раз">
+          </div>
+          <div class="error" id="registerError"></div>
+          <button type="submit" class="btn btn-wax">Создать аккаунт</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ИГРА -->
+    <section class="game" id="gameSection">
+      <div class="user-bar">
+        <div class="who">
+          <span class="avatar" id="avatar">?</span>
+          <span>Игрок: <b id="currentUser">—</b></span>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="logoutBtn">Выйти</button>
+      </div>
+
+      <div class="score-panel">
+        <div class="label">Печати</div>
+        <div class="score" id="scoreDisplay">0</div>
+        <div class="per-click">за клик: <b id="perClickDisplay">1</b></div>
+      </div>
+
+      <div class="seal-area" id="sealArea">
+        <button class="seal-btn" id="sealBtn" aria-label="Клик">
+          <span class="seal-glyph">❦</span>
+          <span class="seal-text">клик</span>
+        </button>
+      </div>
+
+      <div class="upgrades">
+        <h3>Улучшения</h3>
+        <div class="upgrade-grid" id="upgradeGrid"></div>
+      </div>
+
+      <div class="leaders">
+        <h3>Таблица лидеров</h3>
+        <div class="lead-note">Здесь только ты. Чужих нет.</div>
+        <table class="leader-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Игрок</th>
+              <th style="text-align:right">Печати</th>
+            </tr>
+          </thead>
+          <tbody id="leaderBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+  <div class="scroll-rod bottom"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   ХРАНИЛИЩЕ
+   ============================================================ */
+const LS_USERS   = 'scroll_clicker_users_v2';
+const LS_SESSION = 'scroll_clicker_session_v2';
+
+function loadUsers(){
+  try { return JSON.parse(localStorage.getItem(LS_USERS)) || {}; }
+  catch(e){ return {}; }
+}
+function saveUsers(u){ localStorage.setItem(LS_USERS, JSON.stringify(u)); }
+function getSession(){ return localStorage.getItem(LS_SESSION) || ''; }
+function setSession(name){
+  if (name) localStorage.setItem(LS_SESSION, name);
+  else localStorage.removeItem(LS_SESSION);
+}
+
+/* ============================================================
+   СОСТОЯНИЕ
+   ============================================================ */
+let state = {
+  user: null,
+  score: 0,
+  perClick: 1,
+  clickLevel: 0,
+  autoLevel: 0
+};
+
+function clickCost(){ return Math.floor(10 * Math.pow(1.9, state.clickLevel)); }
+function autoCost(){  return Math.floor(25 * Math.pow(1.9, state.autoLevel)); }
+
+const UPGRADES = [
+  {
+    id:'click',
+    name:'Острое перо',
+    desc:'+1 печать за клик',
+    cost: clickCost,
+    canBuy: () => state.score >= clickCost(),
+    buy: () => { state.score -= clickCost(); state.clickLevel++; state.perClick += 1; },
+    level: () => state.clickLevel
+  },
+  {
+    id:'auto',
+    name:'Писец',
+    desc:'+1 печать в секунду',
+    cost: autoCost,
+    canBuy: () => state.score >= autoCost(),
+    buy: () => { state.score -= autoCost(); state.autoLevel++; },
+    level: () => state.autoLevel
+  }
+];
+
+/* ============================================================
+   DOM
+   ============================================================ */
+const scrollWrap    = document.getElementById('scrollWrap');
+const authSection   = document.getElementById('authSection');
+const gameSection   = document.getElementById('gameSection');
+const tabLogin      = document.getElementById('tabLogin');
+const tabRegister   = document.getElementById('tabRegister');
+const loginForm     = document.getElementById('loginForm');
+const registerForm  = document.getElementById('registerForm');
+const loginError    = document.getElementById('loginError');
+const registerError = document.getElementById('registerError');
+const currentUser   = document.getElementById('currentUser');
+const avatarEl      = document.getElementById('avatar');
+const logoutBtn     = document.getElementById('logoutBtn');
+const scoreDisplay  = document.getElementById('scoreDisplay');
+const perClickDisp  = document.getElementById('perClickDisplay');
+const sealBtn       = document.getElementById('sealBtn');
+const sealArea      = document.getElementById('sealArea');
+const upgradeGrid   = document.getElementById('upgradeGrid');
+const leaderBody    = document.getElementById('leaderBody');
+const toastEl       = document.getElementById('toast');
+
+/* ============================================================
+   АНИМАЦИЯ РАЗВОРАЧИВАНИЯ
+   ============================================================ */
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    scrollWrap.classList.add('opened');
+  }, 120);
+});
+
+/* ============================================================
+   ВКЛАДКИ
+   ============================================================ */
+tabLogin.addEventListener('click', () => switchTab('login'));
+tabRegister.addEventListener('click', () => switchTab('register'));
+function switchTab(t){
+  const isLogin = t === 'login';
+  tabLogin.classList.toggle('active', isLogin);
+  tabRegister.classList.toggle('active', !isLogin);
+  loginForm.classList.toggle('hidden', !isLogin);
+  registerForm.classList.toggle('hidden', isLogin);
+  loginError.textContent = '';
+  registerError.textContent = '';
+}
+
+/* ============================================================
+   РЕГИСТРАЦИЯ / ВХОД
+   ============================================================ */
+registerForm.addEventListener('submit', e => {
+  e.preventDefault();
+  registerError.textContent = '';
+  const name = document.getElementById('regName').value.trim();
+  const p1 = document.getElementById('regPass').value;
+  const p2 = document.getElementById('regPass2').value;
+
+  if (name.length < 2) { registerError.textContent = 'Имя слишком коротко (мин. 2).'; return; }
+  if (name.length > 20) { registerError.textContent = 'Имя слишком длинно (макс. 20).'; return; }
+  if (p1.length < 3) { registerError.textContent = 'Пароль мин. 3 символа.'; return; }
+  if (p1 !== p2) { registerError.textContent = 'Пароли не совпадают.'; return; }
+
+  const users = loadUsers();
+  const key = name.toLowerCase();
+  if (users[key]) { registerError.textContent = 'Такое имя уже занято.'; return; }
+
+  users[key] = { name, pass: p1, score: 0, perClick: 1, clickLevel: 0, autoLevel: 0, created: Date.now() };
+  saveUsers(users);
+  startSession(name);
+  toast('Аккаунт создан. Добро пожаловать, ' + name + '!');
+});
+
+loginForm.addEventListener('submit', e => {
+  e.preventDefault();
+  loginError.textContent = '';
+  const name = document.getElementById('loginName').value.trim();
+  const p = document.getElementById('loginPass').value;
+  if (!name || !p) { loginError.textContent = 'Заполни оба поля.'; return; }
+
+  const users = loadUsers();
+  const key = name.toLowerCase();
+  const u = users[key];
+  if (!u || u.pass !== p) { loginError.textContent = 'Неверное имя или пароль.'; return; }
+
+  startSession(u.name);
+  toast('С возвращением, ' + u.name + '!');
+});
+
+/* ============================================================
+   СЕССИЯ
+   ============================================================ */
+function startSession(name){
+  const users = loadUsers();
+  const u = users[name.toLowerCase()];
+  if (!u) return;
+  setSession(u.name);
+  state.user = u.name;
+  state.score = u.score;
+  state.perClick = u.perClick || 1;
+  state.clickLevel = u.clickLevel || 0;
+  state.autoLevel = u.autoLevel || 0;
+
+  currentUser.textContent = u.name;
+  avatarEl.textContent = u.name.charAt(0).toUpperCase();
+  authSection.style.display = 'none';
+  gameSection.classList.add('active');
+
+  renderScore();
+  renderUpgrades();
+  renderLeaders();
+  startAuto();
+}
+
+logoutBtn.addEventListener('click', () => {
+  persist();
+  setSession('');
+  state.user = null;
+  gameSection.classList.remove('active');
+  authSection.style.display = 'flex';
+  loginForm.reset();
+  registerForm.reset();
+  switchTab('login');
+  toast('Ты вышел.');
+});
+
+/* ============================================================
+   СОХРАНЕНИЕ
+   ============================================================ */
+function persist(){
+  if (!state.user) return;
+  const users = loadUsers();
+  const key = state.user.toLowerCase();
+  if (!users[key]) return;
+  users[key].score = Math.floor(state.score);
+  users[key].perClick = state.perClick;
+  users[key].clickLevel = state.clickLevel;
+  users[key].autoLevel = state.autoLevel;
+  saveUsers(users);
+}
+
+/* ============================================================
+   КЛИК
+   ============================================================ */
+sealBtn.addEventListener('click', (e) => {
+  if (!state.user) return;
+  state.score += state.perClick;
+  renderScore(true);
+  persist();
+  renderLeaders();
+  renderUpgrades();
+  spawnPlus(e);
+  spawnCoins(e);
+});
+
+function spawnPlus(e){
+  const rect = sealArea.getBoundingClientRect();
+  const x = (e.clientX ? e.clientX - rect.left : rect.width/2);
+  const y = (e.clientY ? e.clientY - rect.top : rect.height/2);
+
+  const el = document.createElement('span');
+  el.className = 'float-plus';
+  el.textContent = '+' + state.perClick;
+  el.style.left = (x - 10) + 'px';
+  el.style.top  = (y - 20) + 'px';
+  sealArea.appendChild(el);
+  setTimeout(() => el.remove(), 950);
+}
+
+function spawnCoins(e){
+  const rect = sealArea.getBoundingClientRect();
+  const baseX = (e.clientX ? e.clientX - rect.left : rect.width/2);
+  const baseY = (e.clientY ? e.clientY - rect.top : rect.height/2);
+
+  const count = 5;
+  for (let i = 0; i < count; i++){
+    const coin = document.createElement('span');
+    coin.className = 'coin';
+    const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
+    const dist = 60 + Math.random() * 50;
+    coin.style.left = baseX + 'px';
+    coin.style.top  = baseY + 'px';
+    coin.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+    coin.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+    coin.style.animationDelay = (i * 20) + 'ms';
+    sealArea.appendChild(coin);
+    setTimeout(() => coin.remove(), 900);
+  }
+}
+
+/* ============================================================
+   ОТОБРАЖЕНИЕ СЧЁТА
+   ============================================================ */
+function renderScore(bump){
+  scoreDisplay.textContent = formatNumber(Math.floor(state.score));
+  perClickDisp.textContent = state.perClick;
+  if (bump){
+    scoreDisplay.classList.add('bump');
+    setTimeout(() => scoreDisplay.classList.remove('bump'), 130);
+  }
+}
+
+function formatNumber(n){
+  if (n < 1_000_000) return n.toLocaleString('ru-RU');
+  if (n < 1_000_000_000) return (n/1_000_000).toFixed(2).replace('.', ',') + ' млн';
+  return (n/1_000_000_000).toFixed(2).replace('.', ',') + ' млрд';
+}
+
+/* ============================================================
+   УЛУЧШЕНИЯ
+   ============================================================ */
+function renderUpgrades(){
+  upgradeGrid.innerHTML = '';
+  UPGRADES.forEach(u => {
+    const card = document.createElement('div');
+    card.className = 'upgrade';
+    card.innerHTML = `
+      <div class="u-head">
+        <div class="u-name">${u.name}</div>
+        <div class="u-level">ур. ${u.level()}</div>
+      </div>
+      <div class="u-desc">${u.desc}</div>
+      <div class="u-row">
+        <span class="u-cost">${formatNumber(u.cost())}</span>
+        <button class="btn btn-wax btn-sm" data-up="${u.id}">Купить</button>
+      </div>
+    `;
+    const btn = card.querySelector('button');
+    btn.disabled = !u.canBuy();
+    btn.addEventListener('click', () => {
+      if (!state.user) return;
+      if (!u.canBuy()) { toast('Недостаточно печатей.'); return; }
+      u.buy();
+      persist();
+      renderScore();
+      renderUpgrades();
+      renderLeaders();
+      toast('Куплено: ' + u.name);
+    });
+    upgradeGrid.appendChild(card);
+  });
+}
+
+/* ============================================================
+   АВТО-ДОХОД
+   ============================================================ */
+let autoTimer = null;
+function startAuto(){
+  if (autoTimer) clearInterval(autoTimer);
+  autoTimer = setInterval(() => {
+    if (!state.user) return;
+    if (state.autoLevel <= 0) return;
+    state.score += state.autoLevel;
+    renderScore();
+    persist();
+    renderLeaders();
+    renderUpgrades();
+  }, 1000);
+}
+
+/* ============================================================
+   ТАБЛИЦА ЛИДЕРОВ (только текущий)
+   ============================================================ */
+function renderLeaders(){
+  leaderBody.innerHTML = '';
+  if (!state.user){
+    leaderBody.innerHTML = `<tr><td colspan="3" class="empty">Войди, чтобы увидеть своё имя.</td></tr>`;
+    return;
+  }
+  const users = loadUsers();
+  const key = state.user.toLowerCase();
+  const u = users[key];
+  if (!u){
+    leaderBody.innerHTML = `<tr><td colspan="3" class="empty">Имя не найдено.</td></tr>`;
+    return;
+  }
+
+  const row = document.createElement('tr');
+  row.className = 'me';
+  row.innerHTML = `
+    <td class="rank">1</td>
+    <td>${escapeHtml(u.name)}<span class="you-badge">ты</span></td>
+    <td class="score-cell">${formatNumber(Math.floor(state.score))}</td>
+  `;
+  leaderBody.appendChild(row);
+}
+
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ============================================================
+   ТОСТ
+   ============================================================ */
+let toastTimer = null;
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+}
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+(function boot(){
+  const users = loadUsers();
+  const sess = getSession();
+  if (sess && users[sess.toLowerCase()]){
+    startSession(sess);
+  } else {
+    gameSection.classList.remove('active');
+    authSection.style.display = 'flex';
+  }
+})();
+</script>
+</body>
+</html>
